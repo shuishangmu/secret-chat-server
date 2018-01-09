@@ -22,7 +22,7 @@ class Db
         'host'    => '127.0.0.1',
         'port'    => 3306,
         'user'    => 'root',
-        'password' => 'root',
+        'password' => 'sec08mysql',
         'dbname'  => 'mixin_qiye',
         'charset'    => 'utf8',
     );
