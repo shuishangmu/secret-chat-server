@@ -1,5 +1,6 @@
 {
     "require": {
-        "workerman/gateway-worker": "^3.0"
+        "workerman/gateway-worker": "^3.0",
+        "workerman/gatewayclient": "v3.0.0"
     }
 }

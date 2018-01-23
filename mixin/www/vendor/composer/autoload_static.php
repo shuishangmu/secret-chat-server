@@ -14,6 +14,7 @@ class ComposerStaticInitd83077b0eb515ab3440acccb6cabd49c
         'G' => 
         array (
             'GatewayWorker\\' => 14,
+            'GatewayClient\\' => 14,
         ),
     );
 
@@ -25,6 +26,10 @@ class ComposerStaticInitd83077b0eb515ab3440acccb6cabd49c
         'GatewayWorker\\' => 
         array (
             0 => __DIR__ . '/..' . '/workerman/gateway-worker/src',
+        ),
+        'GatewayClient\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/gatewayclient',
         ),
     );
 

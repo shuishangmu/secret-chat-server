@@ -48,11 +48,28 @@ class Events
    /**
     * 当客户端发来消息时触发
     * @param int $client_id 连接id
-    * @param mixed $message 具体消息
+    * @param mixed $data 具体消息
     */
-   public static function onMessage($client_id, $message) {
-       //\Workerman\Worker::log("$client_id said $message");
-       $message = json_decode($message, true);
+   public static function onMessage($client_id, $data) {
+       \Workerman\Worker::log("$client_id said ".json_encode($data));
+       // 判断数据是否正确
+       if(empty($data['class']) || empty($data['method']) || !isset($data['param_array']))
+       {
+           // 发送数据给客户端，请求包错误
+           Gateway::sendToClient($client_id, array('code'=>400, 'msg'=>'bad request', 'data'=>null));
+           //return $connection->send(array('code'=>400, 'msg'=>'bad request', 'data'=>null));
+       }
+       // 获得要调用的类、方法、及参数
+       $class = $data['class'];
+       $method = $data['method'];
+       $param_array = $data['param_array'];
+       if(!class_exists($class))
+       {
+           Gateway::sendToClient($client_id, array('code'=>404, 'msg'=>"class $class not found", 'data'=>null));
+       }else {
+           Gateway::sendToClient($client_id, array('code'=>0, 'msg'=>'success', 'data'=>null));
+       }
+       /*$message = json_decode($message, true);
        switch($message['action'])
        {
            case 'login':
@@ -68,7 +85,7 @@ class Events
                $response['errMessage'] = "OK";
                $response['data'] = array();
                Gateway::sendToClient($client_id, json_encode($response, JSON_UNESCAPED_UNICODE)."\n");
-       }
+       }*/
        // 向所有人发送
        //Gateway::sendToAll("$client_id said $message");
    }

@@ -12,9 +12,9 @@ use \GatewayWorker\Lib\Db;
 
 class User
 {
-    static public function login($data=array(), $client_id="")
+    public static function login($data=array(), $client_id="")
     {
-        $userRow = Db::instance('db')
+        /*$userRow = Db::instance('db')
             ->select('account_id,frist_pwd,email')
             ->from('mx_account')
             ->where("username='".$data['username']."'")
@@ -50,6 +50,7 @@ class User
             $response['errMessage'] = "用户不存在";
             $response['data'] = array();
         }
-        return Gateway::sendToClient($client_id, json_encode($response, JSON_UNESCAPED_UNICODE));
+        return Gateway::sendToClient($client_id, json_encode($response, JSON_UNESCAPED_UNICODE));*/
+        return "OK";
     }
 }

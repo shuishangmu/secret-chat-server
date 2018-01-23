@@ -25,7 +25,7 @@ use \Workerman\Autoloader;
 );
 // gateway 进程，这里使用Text协议，可以用telnet测试
 $gateway = new Gateway("http://0.0.0.0:443", $context);*/
-$gateway = new Gateway("text://0.0.0.0:8282");
+$gateway = new Gateway("JsonNL://0.0.0.0:8282");
 // gateway名称，status方便查看
 $gateway->name = 'MixinGateway';
 // gateway进程数
