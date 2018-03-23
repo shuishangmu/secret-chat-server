@@ -17,15 +17,21 @@ use \GatewayWorker\Gateway;
 use \GatewayWorker\BusinessWorker;
 use \Workerman\Autoloader;
 
-/*$context = array(
+$context = array(
     'ssl' => array(
-        'local_cert' => ROOT_PATH.'/Cert/ServerCert/servercert.pem', // 也可以是crt文件
-        'local_pk'   => ROOT_PATH.'/Cert/ServerCert/serverkey.key',
+        'cafile'=>'/mixin/Cert/CACert/cacert.crt',
+        'local_cert' => '/mixin/Cert/ServerCert/servercert.pem', // 也可以是crt文件
+        'local_pk'   => '/mixin/Cert/ServerCert/serverkey.pem',
+        'verify_peer' => true,
+        'allow_self_signed' => true
     )
 );
-// gateway 进程，这里使用Text协议，可以用telnet测试
-$gateway = new Gateway("http://0.0.0.0:443", $context);*/
-$gateway = new Gateway("JsonNL://0.0.0.0:8282");
+// gateway 进程，这里使用Text协议，可以用telnet测试$context
+//$gateway = new Gateway("JsonNL://0.0.0.0:8282", $context);
+//$gateway->transport = 'ssl';
+$gateway = new Gateway("JsonNL://0.0.0.0:8080");
+
+//$gateway = new Gateway("JsonNL://0.0.0.0:8282");
 // gateway名称，status方便查看
 $gateway->name = 'MixinGateway';
 // gateway进程数
@@ -39,11 +45,11 @@ $gateway->startPort = 2900;
 $gateway->registerAddress = '127.0.0.1:1238';
 
 // 心跳间隔
-//$gateway->pingInterval = 10;
+$gateway->pingInterval = 10;
 //客户端连续$pingNotResponseLimit次$pingInterval时间内不回应心跳则断开链接。
-//$gateway->pingNotResponseLimit = 2;
+$gateway->pingNotResponseLimit = 2;
 // 心跳数据
-//$gateway->pingData = '{"type":"ping"}';
+$gateway->pingData = '';
 
 
 // 当客户端连接上来时，设置连接的onWebSocketConnect，即在websocket握手时的回调

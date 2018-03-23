@@ -289,7 +289,7 @@ class Ws
      */
     public static function decode($bytes, $connection)
     {
-        $masked = $bytes[1] >> 7;
+        $masked = ord($bytes[1]) >> 7;
         $data_length = $masked ? ord($bytes[1]) & 127 : ord($bytes[1]);
         $decoded_data = '';
         if ($masked === true) {
@@ -374,8 +374,9 @@ class Ws
         "Connection: Upgrade\r\n".
         "Upgrade: websocket\r\n".
         "Origin: ". (isset($connection->websocketOrigin) ? $connection->websocketOrigin : '*') ."\r\n".
+	(isset($connection->WSClientProtocol)?"Sec-WebSocket-Protocol: ".$connection->WSClientProtocol."\r\n":'').
         "Sec-WebSocket-Version: 13\r\n".
-        "Sec-WebSocket-Key: ".base64_encode(sha1(uniqid(mt_rand(), true), true))."\r\n\r\n";
+        "Sec-WebSocket-Key: " . base64_encode(md5(mt_rand(), true)) . "\r\n\r\n";
         $connection->send($header, true);
         $connection->handshakeStep               = 1;
         $connection->websocketCurrentFrameLength = 0;
@@ -395,6 +396,16 @@ class Ws
         $pos = strpos($buffer, "\r\n\r\n");
         if ($pos) {
             // handshake complete
+
+	    // Get WebSocket subprotocol (if specified by server)
+    	    $header = explode("\r\n", substr($buffer, 0, $pos));
+	    foreach ($header as $hrow) {
+		if (preg_match("#^(.+?)\:(.+?)$#", $hrow, $m) && ($m[1] == "Sec-WebSocket-Protocol")) {
+		    $connection->WSServerProtocol = trim($m[2]);
+		}
+
+	    }
+
             $connection->handshakeStep = 2;
             $handshake_response_length = $pos + 4;
             // Try to emit onWebSocketConnect callback.
@@ -412,7 +423,7 @@ class Ws
             // Headbeat.
             if (!empty($connection->websocketPingInterval)) {
                 $connection->websocketPingTimer = Timer::add($connection->websocketPingInterval, function() use ($connection){
-                    if (false === $connection->send(pack('H*', '8900'), true)) {
+                    if (false === $connection->send(pack('H*', '898000000000'), true)) {
                         Timer::del($connection->websocketPingTimer);
                         $connection->websocketPingTimer = null;
                     }
@@ -430,4 +441,13 @@ class Ws
         }
         return 0;
     }
+
+    public static function WSSetProtocol($connection, $params) {
+	$connection->WSClientProtocol = $params[0];
+    }
+
+    public static function WSGetServerProtocol($connection) {
+	return (property_exists($connection, 'WSServerProtocol')?$connection->WSServerProtocol:null);
+    }
+
 }

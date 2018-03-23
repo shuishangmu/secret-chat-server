@@ -8,5 +8,4 @@ $baseDir = dirname($vendorDir);
 return array(
     'Workerman\\' => array($vendorDir . '/workerman/workerman'),
     'GatewayWorker\\' => array($vendorDir . '/workerman/gateway-worker/src'),
-    'GatewayClient\\' => array($vendorDir . '/workerman/gatewayclient'),
 );

@@ -65,7 +65,7 @@ class Http
       */
     protected static function getRequestSize($header, $method)
     {
-        if($method=='GET') {
+        if($method === 'GET' || $method === 'OPTIONS' || $method === 'HEAD') {
             return strlen($header) + 4;
         }
         $match = array();
@@ -108,6 +108,7 @@ class Http
             'HTTP_CONNECTION'      => '',
             'REMOTE_ADDR'          => '',
             'REMOTE_PORT'          => '0',
+            'REQUEST_TIME'         => time()
         );
 
         // Parse headers.
@@ -144,7 +145,11 @@ class Http
                 // content-type
                 case 'CONTENT_TYPE':
                     if (!preg_match('/boundary="?(\S+)"?/', $value, $match)) {
-                        $_SERVER['CONTENT_TYPE'] = $value;
+                        if ($pos = strpos($value, ';')) {
+                            $_SERVER['CONTENT_TYPE'] = substr($value, 0, $pos);
+                        } else {
+                            $_SERVER['CONTENT_TYPE'] = $value;
+                        }
                     } else {
                         $_SERVER['CONTENT_TYPE'] = 'multipart/form-data';
                         $http_post_boundary      = '--' . $match[1];
@@ -158,22 +163,23 @@ class Http
 
         // Parse $_POST.
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] === 'multipart/form-data') {
-                self::parseUploadFiles($http_body, $http_post_boundary);
-            } else {
-                parse_str($http_body, $_POST);
-                // $GLOBALS['HTTP_RAW_POST_DATA']
-                $GLOBALS['HTTP_RAW_REQUEST_DATA'] = $GLOBALS['HTTP_RAW_POST_DATA'] = $http_body;
+            if (isset($_SERVER['CONTENT_TYPE'])) {
+                switch ($_SERVER['CONTENT_TYPE']) {
+                    case 'multipart/form-data':
+                        self::parseUploadFiles($http_body, $http_post_boundary);
+                        break;
+                    case 'application/json':
+                        $_POST = json_decode($http_body, true);
+                        break;
+                    case 'application/x-www-form-urlencoded':
+                        parse_str($http_body, $_POST);
+                        break;
+                }
             }
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-                $GLOBALS['HTTP_RAW_REQUEST_DATA'] = $http_body;
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-                $GLOBALS['HTTP_RAW_REQUEST_DATA'] = $http_body;
-        }
+        // HTTP_RAW_REQUEST_DATA HTTP_RAW_POST_DATA
+        $GLOBALS['HTTP_RAW_REQUEST_DATA'] = $GLOBALS['HTTP_RAW_POST_DATA'] = $http_body;
 
         // QUERY_STRING
         $_SERVER['QUERY_STRING'] = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
@@ -367,7 +373,7 @@ class Http
         if (HttpCache::$instance->sessionFile) {
             $raw = file_get_contents(HttpCache::$instance->sessionFile);
             if ($raw) {
-                session_decode($raw);
+                $_SESSION = unserialize($raw);
             }
         }
         return true;
@@ -384,7 +390,7 @@ class Http
             return session_write_close();
         }
         if (!empty(HttpCache::$instance->sessionStarted) && !empty($_SESSION)) {
-            $session_str = session_encode();
+            $session_str = serialize($_SESSION);
             if ($session_str && HttpCache::$instance->sessionFile) {
                 return file_put_contents(HttpCache::$instance->sessionFile, $session_str);
             }
@@ -433,20 +439,23 @@ class Http
         if ($boundary_data_array[0] === '') {
             unset($boundary_data_array[0]);
         }
+        $key = -1;
         foreach ($boundary_data_array as $boundary_data_buffer) {
             list($boundary_header_buffer, $boundary_value) = explode("\r\n\r\n", $boundary_data_buffer, 2);
             // Remove \r\n from the end of buffer.
             $boundary_value = substr($boundary_value, 0, -2);
+            $key ++;
             foreach (explode("\r\n", $boundary_header_buffer) as $item) {
                 list($header_key, $header_value) = explode(": ", $item);
                 $header_key = strtolower($header_key);
                 switch ($header_key) {
                     case "content-disposition":
                         // Is file data.
-                        if (preg_match('/name=".*?"; filename="(.*?)"$/', $header_value, $match)) {
+                        if (preg_match('/name="(.*?)"; filename="(.*?)"$/', $header_value, $match)) {
                             // Parse $_FILES.
-                            $_FILES[] = array(
-                                'file_name' => $match[1],
+                            $_FILES[$key] = array(
+                                'name' => $match[1],
+                                'file_name' => $match[2],
                                 'file_data' => $boundary_value,
                                 'file_size' => strlen($boundary_value),
                             );
@@ -458,6 +467,10 @@ class Http
                                 $_POST[$match[1]] = $boundary_value;
                             }
                         }
+                        break;
+                    case "content-type":
+                        // add file_type
+                        $_FILES[$key]['file_type'] = trim($header_value);
                         break;
                 }
             }
@@ -553,7 +566,7 @@ class HttpCache
     public static function init()
     {
         self::$sessionName = ini_get('session.name');
-        self::$sessionPath = session_save_path();
+        self::$sessionPath = @session_save_path();
         if (!self::$sessionPath || strpos(self::$sessionPath, 'tcp://') === 0) {
             self::$sessionPath = sys_get_temp_dir();
         }
@@ -569,8 +582,6 @@ class HttpCache
         if ($gc_max_life_time = ini_get('session.gc_maxlifetime')) {
             self::$sessionGcMaxLifeTime = $gc_max_life_time;
         }
-
-        @\session_start();
     }
 }
 
